@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>XML Slideshow</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+        }
+    
+        .slideshow-container {
+            position: relative;
+            width: 100%;
+            max-height: 500px;
+            margin: auto;
+            background-color: #f0f0f0;
+            overflow: hidden; 
+        }
+    
+        .mySlides {
+            display: none;
+            width: 100%;
+            height: auto;
+        }
+    
+        img {
+            width: 100%;
+            height: auto;
+            object-fit: contain;
+            background-color: #f0f0f0;
+        }
+    
+        .numbertext {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: #fff;
+            padding: 8px 12px;
+            font-size: 16px;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 10;
+            border-radius: 4px;
+        }
+    
+        .text {
+            color: #fff;
+            font-size: 18px;
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.6);
+            padding: 8px 12px;
+            border-radius: 5px;
+            z-index: 10;
+            white-space: nowrap; 
+        }
+    
+        .dot-container {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 15;
+        }
+    
+        .dot {
+            height: 12px;
+            width: 12px;
+            margin: 0 4px;
+            background-color: #bbb;
+            border-radius: 50%;
+            display: inline-block;
+            transition: background-color 0.6s ease;
+            cursor: pointer;
+        }
+    
+        .active, .dot:hover {
+            background-color: #717171;
+        }
+    
+        .prev, .next {
+            cursor: pointer;
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 50px;
+            height: 50px;
+            background-color: rgba(0, 0, 0, 0.5);
+            color: white;
+            font-weight: bold;
+            font-size: 24px;
+            border-radius: 50%;
+            border: none;
+            z-index: 20;
+            display: flex; /* Center the arrow */
+            align-items: center; /* Vertical centering */
+            justify-content: center; /* Horizontal centering */
+            transition: background-color 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        .next {
+            right: 10px;
+        }
+
+        .prev {
+            left: 10px;
+        }
+
+        .prev:hover, .next:hover {
+            background-color: rgba(0, 0, 0, 0.8);
+        }
+    </style>    
+    
+</head>
+<body onload="loadSlides()">
+
+<div class="slideshow-container">
+    <a class="prev" onclick="plusSlides(-1)">❮</a>
+    <a class="next" onclick="plusSlides(1)">❯</a>
+</div>
+
+<div style="text-align:center">
+</div>
+
+<script>
+    let slideIndex = 1;
+
+    function loadSlides() {
+        fetch('data.xml')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                }
+                return response.text();
+            })
+            .then(data => {
+                let parser = new DOMParser();
+                let xml = parser.parseFromString(data, "application/xml");
+
+                let parseError = xml.getElementsByTagName("parsererror");
+                if (parseError.length > 0) {
+                    console.error("Error parsing XML:", parseError[0].textContent);
+                    return;
+                }
+
+                let slides = xml.getElementsByTagName("slide");
+                if (!slides.length) {
+                    console.error("No slides found in XML");
+                    return;
+                }
+
+                let container = document.querySelector('.slideshow-container');
+                let dotsContainer = document.querySelector('div[style="text-align:center"]');
+
+                container.innerHTML = `
+                    <a class="prev" onclick="plusSlides(-1)">❮</a>
+                    <a class="next" onclick="plusSlides(1)">❯</a>
+                `;
+                dotsContainer.innerHTML = '';
+
+                for (let i = 0; i < slides.length; i++) {
+                    let number = slides[i].getElementsByTagName("number")[0]?.textContent || "";
+                    let image = slides[i].getElementsByTagName("image")[0]?.textContent || "";
+                    let caption = slides[i].getElementsByTagName("caption")[0]?.textContent || "";
+
+                    if (!image) {
+                        console.error(`Missing image in slide ${i + 1}`);
+                        continue;
+                    }
+
+                    let slideDiv = document.createElement("div");
+                    slideDiv.classList.add("mySlides", "fade");
+
+                    slideDiv.innerHTML = `
+                        <div class="numbertext">${number}</div>
+                        <img src="${image}" alt="Slide ${i + 1}">
+                        <div class="text">${caption}</div>
+                    `;
+
+                    container.appendChild(slideDiv);
+
+                    let dot = document.createElement("span");
+                    dot.classList.add("dot");
+                    dot.setAttribute("onclick", `currentSlide(${i + 1})`);
+                    dotsContainer.appendChild(dot);
+                }
+
+                slideIndex = 1;
+                showSlides(slideIndex);
+            })
+            .catch(error => console.error("Error loading XML:", error));
+    }
+
+    function plusSlides(n) {
+        showSlides(slideIndex += n);
+    }
+
+    function currentSlide(n) {
+        showSlides(slideIndex = n);
+    }
+
+    function showSlides(n) {
+        let slides = document.getElementsByClassName("mySlides");
+        let dots = document.getElementsByClassName("dot");
+
+        if (n > slides.length) slideIndex = 1;
+        if (n < 1) slideIndex = slides.length;
+
+        for (let i = 0; i < slides.length; i++) {
+            slides[i].style.display = "none";
+        }
+
+        for (let i = 0; i < dots.length; i++) {
+            dots[i].classList.remove("active");
+        }
+
+        slides[slideIndex - 1].style.display = "block";
+        dots[slideIndex - 1].classList.add("active");
+    }
+</script>
+</body>
+</html>
+
+
+
